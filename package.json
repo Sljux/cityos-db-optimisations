@@ -1,0 +1,23 @@
+{
+  "name": "dbOptimisation",
+  "version": "1.0.0",
+  "description": "",
+  "main": "day.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "date-fns": "^1.28.5",
+    "joi": "^10.5.1",
+    "lodash": "^4.17.4",
+    "mysql": "^2.13.0",
+    "ora": "^1.2.0",
+    "pretty-ms": "^2.1.0",
+    "progress": "^2.0.0",
+    "vogels": "^2.2.0"
+  }
+}
