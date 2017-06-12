@@ -62,9 +62,7 @@ function rowToInsert(row) {
 function insert(values) {
     const sql = u`INSERT INTO sensor_day(device_id, group_id, sensor_id, value, user_id, add_on, time) VALUES ?`;
 
-    console.log(values, sql);
-
-    //return db.queryAsync(sql, [values])
+    return db.queryAsync(sql, [values])
 }
 
 function queryAndInsert(count, interval) {
@@ -72,6 +70,12 @@ function queryAndInsert(count, interval) {
         .map(rowToInsert)
         .then(insert)
 }
+
+module.exports.rowToInsert = rowToInsert;
+
+module.exports.query = query;
+
+module.exports.insert = insert;
 
 module.exports.generateAvgs = queryAndInsert;
 

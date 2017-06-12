@@ -1,15 +1,16 @@
-const vogels      = require('vogels'),
-      Joi         = require('joi'),
-      Promise     = require('bluebird'),
-      ProgressBar = require('progress'),
+const vogels  = require('vogels'),
+      Joi     = require('joi'),
+      Promise = require('bluebird'),
       {
-          loadDevices,
           db,
-          now,
           lastHour,
           start,
-          elapsedTime
-      }           = require('./utils');
+          elapsedTime,
+          now,
+          query,
+          insert,
+          rowToInsert
+      }       = require('./utils');
 
 vogels.AWS.config.update({ region : 'us-east-1' });
 
@@ -30,68 +31,42 @@ const Sensor = vogels.define('sensor', {
     }
 });
 
-const devices = [];
-
 let time = start();
 
-let bar;
-
 db.getConnectionAsync()
-  .then(() => loadDevices())
-  .tap(devices => {
-      bar = new ProgressBar(':bar :percent elapsed :elapsed eta :eta', { total : devices.length })
-  })
-  .map(device =>
-      loadAvg(device)
-          .then(props =>
-              saveAvg(device, props).tap(() => bar.tick())
-          )
-  )
+  .then(() => query(1, 'HOUR'))
+  .tap(saveToDb)
+  .tap(saveHistory)
   .finally(() => {
       elapsedTime(time, 'Last 1h avg');
       db.end()
   });
 
-function loadAvg(device) {
-    const keys  = Object.keys(device.schema),
-          props = {};
-
-    keys.forEach(key => props[key] = sensorAvg(device.id, key));
-
-    return Promise.props(props)
+function saveToDb(values) {
+    return Promise.map(values, rowToInsert).then(insert)
 }
 
-function saveAvg(device, props) {
-    const values = [],
-          models = [];
+function saveHistory(values) {
+    return Promise.map(values, rowToDynamo).tap(console.log).then(saveToDynamo)
+}
 
-    Object.keys(props).forEach(sensorId => {
-        values.push([device.id, device.group_id, sensorId, props[sensorId], device.user_id, now()]);
-        models.push({
-            value    : Math.floor(props[sensorId]) / 1000,
-            time     : lastHour(),
-            deviceId : device.id,
-            sensorId : sensorId,
-            groupId  : device.group_id,
-            userId   : device.user_id
+function rowToDynamo(row) {
+    return {
+        value    : Math.floor(row.avg) / 1000,
+        time     : lastHour(),
+        deviceId : row.device_id,
+        sensorId : row.sensor_id,
+        groupId  : row.group_id,
+        userId   : row.user_id
+    }
+}
+
+function saveToDynamo(values) {
+    return new Promise((resolve, reject) => {
+        Sensor.create(values, err => {
+            if (err) return reject(err);
+
+            resolve()
         })
-    });
-
-    console.log(props, values, models);
-
-    return db.queryAsync(`INSERT INTO sensor_week(device_id, group_id, sensor_id, value, user_id, add_on) VALUES ?`, [values])
-             .then(() =>
-                 new Promise((resolve, reject) => {
-                     Sensor.create(models, (err) => {
-                         if (err) reject(err);
-
-                         resolve();
-                     })
-                 })
-             )
-}
-
-function sensorAvg(deviceId, sensorId) {
-    return db.queryAsync(`SELECT AVG(value) AS avg FROM sensor WHERE device_id = ${deviceId} AND sensor_id = ${sensorId} AND add_on <= DATE_SUB(NOW(), INTERVAL 1 HOUR)`)
-             .then(result => Math.round(result[0].avg))
+    })
 }

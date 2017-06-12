@@ -1,9 +1,5 @@
-const Promise = require('bluebird'),
-      u       = require('untab'),
-      mysql   = require('mysql'),
-      {
+const {
           db,
-          now,
           start,
           elapsedTime,
           generateAvgs
