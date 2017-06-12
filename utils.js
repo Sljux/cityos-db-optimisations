@@ -2,6 +2,7 @@ const Promise  = require('bluebird'),
       format   = require('date-fns/format'),
       ora      = require('ora'),
       prettyMs = require('pretty-ms'),
+      u        = require('untab'),
       mysql    = require('mysql');
 
 Promise.promisifyAll(require('mysql/lib/Connection').prototype);
@@ -19,6 +20,8 @@ const dbOptions = {
 const db = mysql.createPool(dbOptions);
 
 let devices = null;
+
+const now = () => format(Date.now(), 'YYYY-MM-DDTHH:mm:ss');
 
 function loadDevices() {
     const spinner = ora('Fetching devices').start();
@@ -41,11 +44,42 @@ function loadDevices() {
              .tap(res => devices = res)
 }
 
+function query(count, interval) {
+    const sql = u`
+    SELECT ROUND(AVG(value)) AS avg, device_id, sensor_id, group_id, user_id
+    FROM sensor
+    WHERE add_on >= DATE_SUB(NOW(), INTERVAL ${count} ${interval.toUpperCase()})
+    GROUP BY device_id, sensor_id
+    `;
+
+    return db.queryAsync(sql)
+}
+
+function rowToInsert(row) {
+    return [row.device_id, row.group_id, row.sensor_id, row.avg, row.user_id, now(), now()]
+}
+
+function insert(values) {
+    const sql = u`INSERT INTO sensor_day(device_id, group_id, sensor_id, value, user_id, add_on, time) VALUES ?`;
+
+    console.log(values, sql);
+
+    //return db.queryAsync(sql, [values])
+}
+
+function queryAndInsert(count, interval) {
+    return query(count, interval)
+        .map(rowToInsert)
+        .then(insert)
+}
+
+module.exports.generateAvgs = queryAndInsert;
+
 module.exports.loadDevices = loadDevices;
 
 module.exports.db = db;
 
-module.exports.now = () => format(Date.now(), 'YYYY-MM-DDTHH:mm:ss');
+module.exports.now = now;
 
 module.exports.lastHour = () => {
     const date = new Date();
