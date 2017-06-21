@@ -59,16 +59,16 @@ function rowToInsert(row) {
     return [row.device_id, row.group_id, row.sensor_id, row.avg, row.user_id, now(), now()]
 }
 
-function insert(values) {
-    const sql = u`INSERT INTO sensor_day(device_id, group_id, sensor_id, value, user_id, add_on, time) VALUES ?`;
+function insert(values, table) {
+    const sql = u`INSERT INTO ${table}(device_id, group_id, sensor_id, value, user_id, add_on, time) VALUES ?`;
 
     return db.queryAsync(sql, [values])
 }
 
-function queryAndInsert(count, interval) {
+function queryAndInsert(count, interval, table) {
     return query(count, interval)
         .map(rowToInsert)
-        .then(insert)
+        .then(values => insert(values, table))
 }
 
 module.exports.rowToInsert = rowToInsert;
@@ -96,5 +96,5 @@ module.exports.start = () => Date.now();
 
 module.exports.elapsedTime = function (start, note) {
     const elapsed = Date.now() - start;
-    console.log(`${prettyMs(elapsed)} - ${note}`);
+    console.log(`${now()} ${prettyMs(elapsed)} - ${note}`);
 };

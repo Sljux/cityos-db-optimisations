@@ -43,11 +43,11 @@ db.getConnectionAsync()
   });
 
 function saveToDb(values) {
-    return Promise.map(values, rowToInsert).then(insert)
+    return Promise.map(values, rowToInsert).then(values => insert(values, 'sensor_week'))
 }
 
 function saveHistory(values) {
-    return Promise.map(values, rowToDynamo).tap(console.log).then(saveToDynamo)
+    return Promise.map(values, rowToDynamo).then(saveToDynamo)
 }
 
 function rowToDynamo(row) {
