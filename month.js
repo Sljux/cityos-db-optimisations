@@ -8,8 +8,8 @@ const {
 let time = start();
 
 db.getConnectionAsync()
-  .then(() => generateAvgs(6, 'HOUR'))
+  .then(() => generateAvgs(6, 'HOUR', 'sensor_month'))
   .finally(() => {
-      elapsedTime(time, 'Last 6 hours avg', 'sensor_month');
+      elapsedTime(time, 'Last 6 hours avg');
       db.end()
   });
